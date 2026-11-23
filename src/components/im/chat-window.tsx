@@ -35,6 +35,7 @@ export function ChatWindow({ socketRef, onBack, onInviteMembers }: ChatWindowPro
   const loadingMap = useIMStore((s) => s.loadingMessages)
   const onlineUserIds = useIMStore((s) => s.onlineUserIds)
   const typingMap = useIMStore((s) => s.typing)
+  const streamingMap = useIMStore((s) => s.streaming)
   const sending = useIMStore((s) => s.sending)
 
   const [draft, setDraft] = useState('')
@@ -53,6 +54,7 @@ export function ChatWindow({ socketRef, onBack, onInviteMembers }: ChatWindowPro
   const hasMore = activeConversationId ? hasMoreMap[activeConversationId] ?? false : false
   const loading = activeConversationId ? loadingMap[activeConversationId] ?? false : false
   const typingUsers = activeConversationId ? typingMap[activeConversationId] ?? [] : []
+  const streaming = activeConversationId ? streamingMap[activeConversationId] : undefined
 
   const other = conv?.type === 'single' ? conv.members.find((m) => m.id !== me?.id) : null
   const displayName = conv ? conversationDisplayName(conv, me?.id) : ''
@@ -273,6 +275,22 @@ export function ChatWindow({ socketRef, onBack, onInviteMembers }: ChatWindowPro
               myId={me?.id ?? ''}
               convType={conv.type}
             />
+            {/* AI 好友流式输出 */}
+            {streaming && (
+              <div className="mt-3 flex items-start gap-2">
+                <div className="w-9 shrink-0">
+                  <IMAvatar
+                    nickname={streaming.nickname}
+                    color={streaming.avatarColor}
+                    size="sm"
+                  />
+                </div>
+                <div className="max-w-[75%] whitespace-pre-wrap break-words rounded-2xl rounded-bl-md border border-stone-200 bg-white px-3.5 py-2 text-sm leading-relaxed text-stone-800 shadow-sm">
+                  {streaming.text}
+                  <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-stone-400 align-middle" />
+                </div>
+              </div>
+            )}
           </>
         )}
         <div ref={bottomRef} />

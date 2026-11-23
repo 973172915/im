@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { getSessionUser } from '@/lib/auth'
 import { broadcastToChatService } from '@/lib/chat-service'
 import { getConversationMemberIds } from '@/lib/conversations'
+import { respondAsAgent } from '@/lib/ai-agent'
 
 async function assertMember(conversationId: string, userId: string) {
   const membership = await db.conversationMember.findUnique({
@@ -105,6 +106,15 @@ export async function POST(
     event: 'message:new',
     payload,
   })
+
+  // 会话里有 AI 好友 → 异步触发回复（不阻塞发送）
+  const agents = await db.conversationMember.findMany({
+    where: { conversationId: id, user: { is: { kind: 'ai' } } },
+    select: { userId: true },
+  })
+  for (const a of agents) {
+    void respondAsAgent(id, a.userId)
+  }
 
   return NextResponse.json(payload)
 }

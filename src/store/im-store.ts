@@ -29,6 +29,8 @@ interface IMState {
   connected: boolean
   onlineUserIds: Set<string>
   typing: Record<string, TypingUser[]> // conversationId -> typing users
+  /** AI 好友正在流式输出：conversationId -> 当前累积文本 */
+  streaming: Record<string, { agentId: string; nickname: string; avatarColor: string; text: string }>
   sending: boolean
 
   // 操作
@@ -49,6 +51,12 @@ interface IMState {
   setOnlineUserIds: (ids: string[]) => void
   setUserOnline: (userId: string, online: boolean) => void
   setTyping: (conversationId: string, userId: string, nickname: string, isTyping: boolean) => void
+  appendStreaming: (
+    conversationId: string,
+    agent: { id: string; nickname: string; avatarColor: string },
+    text: string
+  ) => void
+  clearStreaming: (conversationId: string) => void
   setSending: (v: boolean) => void
   clearUnread: (conversationId: string) => void
   reset: () => void
@@ -70,6 +78,7 @@ export const useIMStore = create<IMState>((set) => ({
   connected: false,
   onlineUserIds: new Set<string>(),
   typing: {},
+  streaming: {},
   sending: false,
 
   setMe: (me) => set({ me }),
@@ -136,6 +145,27 @@ export const useIMStore = create<IMState>((set) => ({
       return { typing: { ...state.typing, [conversationId]: next } }
     }),
   setSending: (v) => set({ sending: v }),
+  appendStreaming: (conversationId, agent, text) =>
+    set((state) => {
+      const prev = state.streaming[conversationId]
+      return {
+        streaming: {
+          ...state.streaming,
+          [conversationId]: {
+            agentId: agent.id,
+            nickname: agent.nickname,
+            avatarColor: agent.avatarColor,
+            text: (prev?.agentId === agent.id ? prev.text : '') + text,
+          },
+        },
+      }
+    }),
+  clearStreaming: (conversationId) =>
+    set((state) => {
+      const next = { ...state.streaming }
+      delete next[conversationId]
+      return { streaming: next }
+    }),
   clearUnread: (conversationId) =>
     set((state) => ({
       conversations: state.conversations.map((c) =>
@@ -156,6 +186,7 @@ export const useIMStore = create<IMState>((set) => ({
       connected: false,
       onlineUserIds: new Set<string>(),
       typing: {},
+      streaming: {},
       sending: false,
     }),
 }))

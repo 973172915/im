@@ -95,6 +95,31 @@ export function useSocket() {
       useIMStore.getState().setTyping(message.conversationId, message.senderId, message.senderNickname, false)
     })
 
+    // AI 好友流式输出
+    socket.on(
+      'message:delta',
+      (data: {
+        conversationId: string
+        agentId: string
+        nickname: string
+        avatarColor: string
+        text: string
+      }) => {
+        if (!data?.conversationId || !data.text) return
+        useIMStore.getState().appendStreaming(
+          data.conversationId,
+          { id: data.agentId, nickname: data.nickname, avatarColor: data.avatarColor || '#8b5cf6' },
+          data.text
+        )
+      }
+    )
+
+    socket.on('message:done', (data: { conversationId: string }) => {
+      if (!data?.conversationId) return
+      // 给一个极短延迟，等 message:new 先落地，避免闪烁
+      setTimeout(() => useIMStore.getState().clearStreaming(data.conversationId), 120)
+    })
+
     // 正在输入
     socket.on(
       'typing:update',
