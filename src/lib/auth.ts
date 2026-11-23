@@ -1,6 +1,7 @@
 import { randomBytes, scryptSync, timingSafeEqual } from 'crypto'
 import { db } from '@/lib/db'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
+import type { NextRequest } from 'next/server'
 
 export const SESSION_COOKIE = 'im_session'
 export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000
@@ -60,18 +61,54 @@ export async function getUserByToken(token: string | undefined | null): Promise<
   }
 }
 
-/** 从请求 cookie 中取当前登录用户（route handler 内使用） */
+/** 从请求 cookie 中取当前登录用户（route handler 内使用）
+ * 兼容 iframe 内嵌等第三方 Cookie 受限场景：
+ * Cookie 缺失时回落到 Authorization: Bearer <token> 头认证 */
 export async function getSessionUser(): Promise<SessionUser | null> {
   const cookieStore = await cookies()
-  return getUserByToken(cookieStore.get(SESSION_COOKIE)?.value)
+  let token = cookieStore.get(SESSION_COOKIE)?.value
+  if (!token) {
+    const headerStore = await headers()
+    const authorization = headerStore.get('authorization')
+    if (authorization?.startsWith('Bearer ')) {
+      token = authorization.slice(7).trim()
+    }
+  }
+  return getUserByToken(token)
 }
 
-export function sessionCookieOptions(maxAgeSeconds: number = SESSION_TTL_MS / 1000) {
+/** 根据请求协议返回 cookie 选项：
+ * HTTPS（网关转发 x-forwarded-proto=https）时用 SameSite=None + Secure，
+ * 保证预览面板等 iframe 内嵌场景可正常携带；本地 HTTP 保持 Lax */
+export function sessionCookieOptions(
+  req: NextRequest,
+  maxAgeSeconds: number = SESSION_TTL_MS / 1000
+) {
+  const proto =
+    req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim() ??
+    req.nextUrl.protocol.replace(':', '')
+  if (proto === 'https') {
+    return {
+      httpOnly: true,
+      sameSite: 'none' as const,
+      secure: true,
+      path: '/',
+      maxAge: maxAgeSeconds,
+    }
+  }
   return {
-    name: SESSION_COOKIE,
     httpOnly: true,
     sameSite: 'lax' as const,
     path: '/',
     maxAge: maxAgeSeconds,
   }
+}
+
+/** 从请求中提取会话 token（优先 Cookie，其次 Bearer 头），供登出等场景使用 */
+export function extractSessionToken(req: NextRequest): string | undefined {
+  const cookieToken = req.cookies.get(SESSION_COOKIE)?.value
+  if (cookieToken) return cookieToken
+  const authorization = req.headers.get('authorization')
+  if (authorization?.startsWith('Bearer ')) return authorization.slice(7).trim()
+  return undefined
 }

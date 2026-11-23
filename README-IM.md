@@ -35,6 +35,7 @@ Next.js API 路由 ────内部桥接 socket（广播消息）────
 - **消息可靠性**：消息通过 REST 写入 SQLite 后，由 API 服务经内部桥接 socket 广播（房间 + 成员直发双保险，带 ack 确认与自动重连）
 - **在线状态**：上线 / 下线广播 + 客户端主动查询（presence:query）双机制，避免错过广播
 - **多端登录**：同一账号多个标签页可同时在线
+- **认证双通道**：Cookie（HTTPS 下 `SameSite=None; Secure`）+ `Authorization: Bearer` 头（token 存 localStorage）。预览面板等 iframe 内嵌场景第三方 Cookie 会被浏览器拦截，此时自动走 Bearer 认证，登录态不丢失
 
 ## 目录结构
 

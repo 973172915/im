@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MessageCircle, Sparkles, Loader2, UserRound, KeyRound, IdCard } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { api } from '@/lib/api'
+import { api, setAuthToken } from '@/lib/api'
 import { useIMStore } from '@/store/im-store'
 
 export function AuthScreen() {
@@ -36,6 +36,7 @@ export function AuthScreen() {
         username: loginUsername.trim(),
         password: loginPassword,
       })
+      setAuthToken(token)
       setMe(user)
       setToken(token)
       toast({ title: `欢迎回来，${user.nickname}` })
@@ -64,6 +65,7 @@ export function AuthScreen() {
         password: regPassword,
         nickname: regNickname.trim() || undefined,
       })
+      setAuthToken(token)
       setMe(user)
       setToken(token)
       toast({ title: `注册成功，欢迎加入灵犀 IM，${user.nickname}` })

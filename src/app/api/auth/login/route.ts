@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { verifyPassword, createSession, SESSION_COOKIE, SESSION_TTL_MS } from '@/lib/auth'
+import { verifyPassword, createSession, SESSION_COOKIE, sessionCookieOptions } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,17 +28,12 @@ export async function POST(req: NextRequest) {
       },
       token,
     })
-    res.cookies.set(SESSION_COOKIE, token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: SESSION_TTL_MS / 1000,
-    })
+    // httpOnly 会话 cookie（HTTPS 下 SameSite=None+Secure，兼容 iframe 内嵌）
+    res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(req))
+    // 非 httpOnly token，供前端 socket 认证
     res.cookies.set('im_token', token, {
+      ...sessionCookieOptions(req),
       httpOnly: false,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: SESSION_TTL_MS / 1000,
     })
     return res
   } catch (e) {

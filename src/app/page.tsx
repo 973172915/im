@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { AuthScreen } from '@/components/im/auth-screen'
 import { ChatApp } from '@/components/im/chat-app'
-import { api } from '@/lib/api'
+import { api, getAuthToken, setAuthToken } from '@/lib/api'
 import { useIMStore } from '@/store/im-store'
 
 function readTokenCookie(): string | null {
@@ -26,10 +26,12 @@ export default function Home() {
       .then(({ user }) => {
         if (cancelled) return
         setMe(user)
-        setToken(readTokenCookie())
+        // token 优先取 localStorage（Cookie 受限场景的主认证手段），回落到非 httpOnly cookie
+        setToken(getAuthToken() ?? readTokenCookie())
       })
       .catch(() => {
-        /* 未登录 */
+        /* 未登录或 token 失效 */
+        setAuthToken(null)
       })
       .finally(() => {
         if (!cancelled) setAuthChecked(true)

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { IMAvatar } from '@/components/im/im-avatar'
 import { formatListTime } from '@/lib/im-utils'
+import { api, setAuthToken } from '@/lib/api'
 import { useIMStore } from '@/store/im-store'
 import { cn } from '@/lib/utils'
 import type { ConversationSummary } from '@/lib/im-types'
@@ -59,9 +60,14 @@ export function Sidebar({ onOpenAddFriend, onOpenFriendRequests, onOpenNewGroup,
   }, [friends, keyword])
 
   function handleLogout() {
-    void fetch('/api/auth/logout', { method: 'POST' }).finally(() => {
-      reset()
-    })
+    // 经 api 客户端携带 Authorization 头，确保 Cookie 受限场景也能正确销毁会话
+    void api
+      .logout()
+      .catch(() => null)
+      .finally(() => {
+        setAuthToken(null)
+        reset()
+      })
   }
 
   return (
