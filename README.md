@@ -185,6 +185,20 @@ CLOUD_BASE_URL=http://127.0.0.1:8000/v1
 
 ---
 
+## 文档
+
+| 文档 | 内容 |
+| --- | --- |
+| [API 文档](docs/api.md) | 全部接口、Socket 事件、推理服务、调用示例 |
+| [架构设计](docs/architecture.md) | 分层、数据模型、消息链路、端云路由、可靠性 |
+| [上下文管理](docs/context.md) | token 预算、滚动摘要、情景检索、向量召回 |
+| [长期记忆](docs/memory.md) | 事实抽取、召回打分、注入措辞实验 |
+| [模型训练](docs/training.md) | QLoRA 与 GPT-SoVITS 的配置、结果、踩坑 |
+| [部署说明](docs/deploy.md) | 最小启动、三种推理后端、验收清单 |
+| [模型卡](docs/model-cards/) | 三个已发布模型的完整说明 |
+
+---
+
 ## 目录结构
 
 单仓一体化：前端、服务、训练脚本同仓。
