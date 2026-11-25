@@ -18,8 +18,9 @@ export function useSocket() {
   useEffect(() => {
     if (!me || !token) return
 
-    // Never use PORT in the URL, always use XTransformPort
-    const socket = io('/?XTransformPort=3003', {
+    // 优先用显式地址（本地直连 / 部署时指定），否则回退到 Caddy 的端口转发约定
+    const target = process.env.NEXT_PUBLIC_SOCKET_URL || '/?XTransformPort=3003'
+    const socket = io(target, {
       transports: ['websocket', 'polling'],
       forceNew: true,
       reconnection: true,

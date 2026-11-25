@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { hashPassword, createSession, SESSION_COOKIE, sessionCookieOptions } from '@/lib/auth'
+import { ensureAiFriend } from '@/lib/ai-friend'
 
 const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4']
 
@@ -34,6 +35,9 @@ export async function POST(req: NextRequest) {
         avatarColor: COLORS[Math.floor(Math.random() * COLORS.length)],
       },
     })
+
+    // 新用户开箱即有一个 AI 好友（否则好友列表为空）
+    await ensureAiFriend(user.id)
 
     const token = await createSession(user.id)
     const res = NextResponse.json({

@@ -11,6 +11,8 @@ import {
   UserRoundPlus,
   Loader2,
   MessageCircle,
+  Volume2,
+  Pause,
 } from 'lucide-react'
 import { IMAvatar } from '@/components/im/im-avatar'
 import { conversationDisplayName } from '@/components/im/sidebar'
@@ -337,7 +339,15 @@ export function ChatWindow({ socketRef, onBack, onInviteMembers }: ChatWindowPro
 }
 
 interface DecoratedMessage {
-  msg: { id: number; senderId: string; senderNickname: string; senderAvatarColor: string; content: string; createdAt: string }
+  msg: {
+    id: number
+    senderId: string
+    senderNickname: string
+    senderAvatarColor: string
+    senderKind?: string
+    content: string
+    createdAt: string
+  }
   mine: boolean
   day: string
   showDay: boolean
@@ -374,6 +384,53 @@ function decorateMessages(
 
     return { msg, mine, day, showDay, showSender, grouped, showTime }
   })
+}
+
+/** 朗读一条消息（调 /api/tts 合成语音） */
+function SpeakButton({ text }: { text: string }) {
+  const [loading, setLoading] = useState(false)
+  const [playing, setPlaying] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  async function toggle() {
+    if (playing) {
+      audioRef.current?.pause()
+      setPlaying(false)
+      return
+    }
+    setLoading(true)
+    try {
+      const audio = audioRef.current ?? new Audio()
+      audioRef.current = audio
+      audio.onended = () => setPlaying(false)
+      audio.onerror = () => setPlaying(false)
+      audio.src = `/api/tts?text=${encodeURIComponent(text)}`
+      await audio.play()
+      setPlaying(true)
+    } catch {
+      /* 播放失败静默，避免打断聊天 */
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      title={playing ? '停止' : '朗读'}
+      className="mt-1 inline-flex items-center gap-1 rounded-full border border-stone-200 px-2 py-0.5 text-[11px] text-stone-500 transition hover:border-emerald-300 hover:text-emerald-600"
+    >
+      {loading ? (
+        <Loader2 className="h-3 w-3 animate-spin" />
+      ) : playing ? (
+        <Pause className="h-3 w-3" />
+      ) : (
+        <Volume2 className="h-3 w-3" />
+      )}
+      {loading ? '合成中' : playing ? '停止' : '朗读'}
+    </button>
+  )
 }
 
 function MessageList({
@@ -429,6 +486,7 @@ function MessageList({
               >
                 {msg.content}
               </div>
+              {!mine && msg.senderKind === 'ai' && <SpeakButton text={msg.content} />}
               {showTime && (
                 <span className="mt-0.5 px-1 text-[10px] text-stone-400">
                   {formatMessageTime(msg.createdAt)}

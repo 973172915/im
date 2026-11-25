@@ -99,7 +99,7 @@ function handleRefreshRooms(data: { userIds?: string[] }) {
   const userIds = data?.userIds ?? []
   for (const uid of userIds) {
     for (const sock of socketsOf(uid)) {
-      void syncUserRooms(sock, uid, false)
+      void syncUserRooms(sock, uid)
     }
   }
 }

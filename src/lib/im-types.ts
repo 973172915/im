@@ -19,6 +19,7 @@ export interface ChatMessage {
   senderId: string
   senderNickname: string
   senderAvatarColor: string
+  senderKind?: string
   content: string
   createdAt: string
 }

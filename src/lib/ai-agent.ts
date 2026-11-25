@@ -155,6 +155,7 @@ export async function respondAsAgent(conversationId: string, agentId: string): P
           senderId: saved.senderId,
           senderNickname: saved.sender.nickname,
           senderAvatarColor: saved.sender.avatarColor,
+          senderKind: saved.sender.kind,
           content: saved.content,
           createdAt: saved.createdAt.toISOString(),
         },

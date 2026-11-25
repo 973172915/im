@@ -46,6 +46,7 @@ export async function GET(
         senderId: m.senderId,
         senderNickname: m.sender.nickname,
         senderAvatarColor: m.sender.avatarColor,
+        senderKind: m.sender.kind,
         content: m.content,
         createdAt: m.createdAt.toISOString(),
       }))
@@ -93,6 +94,7 @@ export async function POST(
       senderId: message.senderId,
       senderNickname: message.sender.nickname,
       senderAvatarColor: message.sender.avatarColor,
+      senderKind: message.sender.kind,
       content: message.content,
       createdAt: message.createdAt.toISOString(),
     },
