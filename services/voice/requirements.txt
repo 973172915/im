@@ -1,0 +1,6 @@
+fastapi>=0.110
+uvicorn>=0.27
+httpx>=0.26
+pydantic>=2.6
+# 默认引擎（在线，中文女声）
+edge-tts>=6.1

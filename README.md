@@ -186,23 +186,40 @@ CLOUD_BASE_URL=http://127.0.0.1:8000/v1
 
 ## 目录结构
 
+单仓一体化：前端、服务、训练脚本同仓。
+
 ```
 lingxi-im/
-├── src/
-│   ├── app/                 # Next.js 页面与 API 路由
-│   ├── components/im/       # 聊天界面组件
+├── src/                     # Next.js 前端与 API
+│   ├── app/                 # 页面与路由
+│   ├── components/im/       # 聊天界面
 │   ├── hooks/               # Socket.io 与状态钩子
 │   ├── lib/
-│   │   ├── ai-agent.ts      # AI 好友编排（流式）
-│   │   ├── auth.ts          # 会话与密码
-│   │   └── db.ts            # Prisma 客户端
+│   │   ├── ai-agent.ts      # AI 好友编排（流式 + 记忆注入）
+│   │   ├── memory.ts        # 事实记忆（抽取/召回）
+│   │   ├── context.ts       # token 预算与滚动摘要
+│   │   ├── recall.ts        # 情景检索（词法 + 向量）
+│   │   ├── embed.ts         # 向量服务客户端
+│   │   └── auth.ts          # 会话与密码
 │   └── store/               # 前端状态
 ├── prisma/schema.prisma     # 数据模型
 ├── mini-services/
 │   └── chat-service/        # Socket.io 服务
-├── services/                # 推理与语音服务（子模块）
-├── scripts/                 # 种子数据与工具
-└── docs/                    # 设计文档
+├── services/                # Python 推理服务
+│   ├── ai_gateway/          # 统一推理入口（SSE + 路由）
+│   ├── device/              # 端侧 MNN 4B int4
+│   ├── voice/               # 语音合成（edge / GPT-SoVITS）
+│   └── embed/               # 文本向量（bge-small-zh）
+├── training/                # 模型训练与数据处理
+│   ├── train_lora.py        # QLoRA 微调
+│   ├── build_dataset.py     # 数据构建
+│   ├── audit_dataset.py     # 数据体检
+│   └── merge_lora.py        # 合并权重
+├── scripts/
+│   └── dev/                 # 一键启停
+├── tests/
+├── docs/                    # 设计文档
+└── data/                    # 运行时数据（不入库）
 ```
 
 ---

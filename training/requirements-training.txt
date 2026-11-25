@@ -1,0 +1,13 @@
+# 训练环境依赖（GPU 机器上用，不是本地运行时依赖）
+# 安装：
+#   pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu121
+#   pip install -r training/requirements-training.txt
+
+torch==2.5.1
+transformers==4.46.3
+peft==0.13.2
+datasets==3.1.0
+accelerate==1.1.1
+bitsandbytes==0.44.1
+sentencepiece==0.2.0
+protobuf==5.28.3

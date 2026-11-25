@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 <#
 .SYNOPSIS
     一键启动灵犀 IM 的全部本地服务。
@@ -18,10 +18,9 @@
 #>
 param(
     [string]$Root     = (Resolve-Path "$PSScriptRoot\..\..").Path,
-    [string]$Float    = "F:\im-llm-assistant",
     [string]$Gsv      = "F:\GPT-SoVITS",
     [string]$VoicePy  = "F:\voice_sovits\Scripts\python.exe",
-    [string]$MainPy   = "",
+    [string]$MainPy   = "F:\im-llm-assistant\.venv\Scripts\python.exe",
     [switch]$SkipVoice,
     [switch]$SkipSovits,
     [int]$TimeoutSec  = 300
@@ -31,7 +30,6 @@ $ErrorActionPreference = 'Stop'
 $LogDir  = Join-Path $Root 'logs'
 $PidFile = Join-Path $Root '.dev-pids.json'
 New-Item -ItemType Directory -Force $LogDir | Out-Null
-if (-not $MainPy) { $MainPy = Join-Path $Float '.venv\Scripts\python.exe' }
 
 $pids = @{}
 if (Test-Path $PidFile) {
@@ -121,30 +119,30 @@ if (-not $SkipVoice -and -not $SkipSovits) {
 # 2. 语音合成服务
 if (-not $SkipVoice) {
     Start-Svc -Name 'tts' -Port 9100 -File $MainPy -ArgList @('server.py') `
-        -WorkDir (Join-Path $Float 'services\voice') `
+        -WorkDir (Join-Path $Root 'services\voice') `
         -Env @{ TTS_ENGINE = 'sovits'; SOVITS_API = 'http://127.0.0.1:9880'; SOVITS_VOICE = 'dafeiyu'; TTS_FALLBACK_EDGE = '1' }
 }
 
 # 3. 向量服务（记忆语义召回）
 if (-not $SkipVoice) {
     Start-Svc -Name 'embed' -Port 9300 -File $VoicePy -ArgList @('server.py') `
-        -WorkDir (Join-Path $Float 'services\embed') `
+        -WorkDir (Join-Path $Root 'services\embed') `
         -Env @{ EMBED_MODEL_DIR = 'F:\models\bge-small-zh-v1.5' } -WaitSec 40
 }
 
 # 3. 端侧推理
 Start-Svc -Name 'device' -Port 9000 -File $MainPy `
     -ArgList @('-m','uvicorn','server:app','--host','127.0.0.1','--port','9000') `
-    -WorkDir (Join-Path $Float 'services\device') `
+    -WorkDir (Join-Path $Root 'services\device') `
     -Env @{
         MNN_MODEL_DIR  = 'F:\mnn-test\qwen3-4b-roleplay-v4-mnn'
         MODEL_ID       = 'qwen3-4b-roleplay'
-        MNN_STREAM_EXE = (Join-Path $Float 'services\device\mnn_stream.exe')
+        MNN_STREAM_EXE = (Join-Path $Root 'services\device\mnn_stream.exe')
     } -WaitSec 40
 
 # 4. 推理网关
 Start-Svc -Name 'gateway' -Port 9200 -File $MainPy -ArgList @('app.py') `
-    -WorkDir (Join-Path $Float 'services\ai_gateway') `
+    -WorkDir (Join-Path $Root 'services\ai_gateway') `
     -Env @{ INFERENCE_MODE = 'device'; DEVICE_BASE_URL = 'http://127.0.0.1:9000/v1'; DEVICE_MODEL = 'qwen3-4b-roleplay' }
 
 # 5. Socket 服务
@@ -161,7 +159,7 @@ $pids | ConvertTo-Json | Set-Content $PidFile -Encoding UTF8
 
 Write-Host "`n=== 状态 ===" -ForegroundColor Cyan
 $svc = @(
-    @{ n='GPT-SoVITS'; p=9880 }, @{ n='TTS'; p=9100 }, @{ n='device'; p=9000 },
+    @{ n='GPT-SoVITS'; p=9880 }, @{ n='TTS'; p=9100 }, @{ n='embed'; p=9300 }, @{ n='device'; p=9000 },
     @{ n='gateway'; p=9200 }, @{ n='chat'; p=3003 }, @{ n='web'; p=3000 }
 )
 foreach ($s in $svc) {

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 <#
 .SYNOPSIS
     停止 start-all.ps1 启动的全部服务。

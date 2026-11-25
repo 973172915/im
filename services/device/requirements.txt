@@ -1,0 +1,4 @@
+fastapi>=0.110
+uvicorn>=0.27
+# MNN Python 包（加载模型、tokenizer）；Windows 可用 pip 安装
+MNN>=2.8

@@ -77,3 +77,12 @@ weights/
 # 本地开发脚本产物
 /logs/
 .dev-pids.json
+# Python 服务
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+services/voice/cache/
+services/device/*.exe
+*.egg-info/

@@ -1,0 +1,6 @@
+fastapi>=0.110
+uvicorn>=0.27
+pydantic>=2.6
+# bge-small-zh-v1.5 推理（CPU 即可）
+torch>=2.2
+transformers>=4.40
