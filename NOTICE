@@ -1,0 +1,43 @@
+# NOTICE
+
+本仓库包含代码与模型权重两类资产，适用不同许可。
+
+## 代码
+
+本仓库的源代码（`src/`、`scripts/`、`mini-services/` 等）适用 **MIT License**，见 `LICENSE`。
+
+## 模型权重
+
+Release `v1` 中附带两个模型，均为**通过公开数据集微调的产物**，遵循 **CC-BY-NC-4.0（署名—非商业性使用）**，**禁止商业用途**。
+
+### 1. 沐雪 Qwen3-4B LoRA（`lora_v4_slim.tar.gz`）
+
+| 项 | 内容 |
+| --- | --- |
+| 基座模型 | Qwen3-4B-Instruct-2507（Apache-2.0，阿里巴巴） |
+| 训练数据 | [Moemu/Muice-Dataset](https://huggingface.co/datasets/Moemu/Muice-Dataset)（CC-BY-NC-4.0） |
+| 本模型性质 | 对上述数据的微调产物（修改说明：QLoRA 微调，非原始数据） |
+| 适用许可 | CC-BY-NC-4.0 |
+
+### 2. 大肥鱼 GPT-SoVITS v2 音色（`voice_model_dafeiyu.tar.gz`）
+
+| 项 | 内容 |
+| --- | --- |
+| 训练框架 | [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS)（MIT） |
+| 训练数据 | [YinZilu/da-fei-yu-girl-voice-zh](https://modelscope.cn/datasets/YinZilu/da-fei-yu-girl-voice-zh)（CC-BY-NC-4.0） |
+| 数据作者 | 尹紫鹭幻想社 |
+| 角色形象 | 大肥鱼，CC BY-NC-SA 4.0 |
+| 本模型性质 | 基于上述数据从零复现的训练结果（非搬运现成权重） |
+| 适用许可 | CC-BY-NC-4.0 |
+
+## 使用限制
+
+- ❌ 不得用于任何商业用途（售卖、广告、付费服务、商业产品集成）
+- ❌ 不得声称为自己的原创音色/角色
+- ❌ 不得移除本文件中的署名
+- ✅ 可用于学习、研究、非商业演示
+- ✅ 可再分发，但须保留本 NOTICE 并注明修改
+
+## 免责
+
+模型可能存在偏差、错误或不适当输出。使用者需自行承担使用风险，作者不对因使用本模型产生的任何后果负责。
