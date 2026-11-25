@@ -108,18 +108,31 @@ npx prisma db push
 npm run seed        # 创建演示账号与 AI 好友
 ```
 
-### 3. 启动 IM
+### 3. 一键启动（推荐）
 
-```bash
-npm run dev         # http://localhost:3000
+```powershell
+.\scripts\dev\start-all.ps1     # 启动全部服务，已在运行的自动跳过
+.\scripts\dev\stop-all.ps1      # 停止全部服务
 ```
 
-### 4. 启动推理网关（可选，无则走 MOCK）
+脚本会依次拉起 6 个服务并打印状态：
+
+| 端口 | 服务 | 说明 |
+| --- | --- | --- |
+| 9880 | GPT-SoVITS | 音色合成（CPU 加载约 4 分钟，最先启动） |
+| 9100 | TTS 服务 | 封装音色引擎，失败回退 edge-tts |
+| 9000 | device | MNN 4B int4 端侧推理 |
+| 9200 | ai-gateway | 无状态推理网关 |
+| 3003 | chat-service | Socket.io |
+| 3000 | Next.js | 前端 |
+
+日志在 `logs/`，PID 记录在 `.dev-pids.json`。也可 `-SkipVoice` 跳过语音。
+
+### 4. 手动启动单个服务
 
 ```bash
-cd services/ai_gateway
-pip install -r requirements.txt
-MOCK_AI=1 python app.py      # 无模型时返回预设回复
+npm run dev                          # 仅前端
+cd services/ai_gateway && python app.py     # 仅网关（MOCK_AI=1 可无模型）
 ```
 
 ### 5. 接入真实模型（可选）

@@ -73,3 +73,7 @@ weights/
 # 训练产物
 *.tar.gz
 /dist/
+
+# 本地开发脚本产物
+/logs/
+.dev-pids.json
