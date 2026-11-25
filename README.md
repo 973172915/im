@@ -111,8 +111,11 @@ npm run seed        # 创建演示账号与 AI 好友
 ### 3. 一键启动（推荐）
 
 ```powershell
-.\scripts\dev\start-all.ps1     # 启动全部服务，已在运行的自动跳过
-.\scripts\dev\stop-all.ps1      # 停止全部服务
+.\scripts\dev\start-all.cmd     # 启动全部服务（等效于下面的 ps1，且不受执行策略限制）
+.\scripts\dev\stop-all.cmd      # 停止全部服务
+
+# 也可直接跑 ps1（若提示禁止运行脚本，先 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned）
+.\scripts\dev\start-all.ps1
 ```
 
 脚本会依次拉起 6 个服务并打印状态：

@@ -39,7 +39,18 @@ if (Test-Path $PidFile) {
 }
 
 function Test-Port([int]$Port) {
-    return [bool](Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
+    # Get-NetTCPConnection 在部分机器上单次调用要数秒，这里用 TCP 握手探测（毫秒级）
+    $client = New-Object System.Net.Sockets.TcpClient
+    try {
+        $iar = $client.BeginConnect('127.0.0.1', $Port, $null, $null)
+        if (-not $iar.AsyncWaitHandle.WaitOne(300)) { return $false }
+        $client.EndConnect($iar)
+        return $true
+    } catch {
+        return $false
+    } finally {
+        $client.Close()
+    }
 }
 
 function Wait-Health {
@@ -56,7 +67,7 @@ function Start-Svc {
         [string]$Name,
         [int]$Port,
         [string]$File,
-        [string[]]$Args,
+        [string[]]$ArgList,
         [string]$WorkDir,
         [hashtable]$Env = @{},
         [int]$WaitSec = 20
@@ -76,7 +87,7 @@ function Start-Svc {
     try {
         $out = Join-Path $LogDir "$Name.out.log"
         $err = Join-Path $LogDir "$Name.err.log"
-        $p = Start-Process -FilePath $File -ArgumentList $Args -WorkingDirectory $WorkDir `
+        $p = Start-Process -FilePath $File -ArgumentList $ArgList -WorkingDirectory $WorkDir `
              -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err -PassThru
         $pids[$Name] = $p.Id
         Write-Host ("[start] {0,-14} :{1}  pid={2}" -f $Name, $Port, $p.Id) -ForegroundColor Green
@@ -101,7 +112,7 @@ if (-not $SkipVoice -and -not $SkipSovits) {
         Write-Host "[skip] sovits 环境不存在: $VoicePy" -ForegroundColor DarkGray
     } else {
         Start-Svc -Name 'sovits' -Port 9880 -File $VoicePy `
-            -Args @('api_v2.py','-a','127.0.0.1','-p','9880','-c','GPT_SoVITS/configs/tts_infer.yaml') `
+            -ArgList @('api_v2.py','-a','127.0.0.1','-p','9880','-c','GPT_SoVITS/configs/tts_infer.yaml') `
             -WorkDir $Gsv -Env @{ PYTHONPATH = (Join-Path $Gsv 'GPT_SoVITS') } -WaitSec 5
         Write-Host "        （CPU 加载模型约 4 分钟，可先用其他服务）" -ForegroundColor DarkGray
     }
@@ -109,14 +120,14 @@ if (-not $SkipVoice -and -not $SkipSovits) {
 
 # 2. 语音合成服务
 if (-not $SkipVoice) {
-    Start-Svc -Name 'tts' -Port 9100 -File $MainPy -Args @('server.py') `
+    Start-Svc -Name 'tts' -Port 9100 -File $MainPy -ArgList @('server.py') `
         -WorkDir (Join-Path $Float 'services\voice') `
         -Env @{ TTS_ENGINE = 'sovits'; SOVITS_API = 'http://127.0.0.1:9880'; SOVITS_VOICE = 'dafeiyu'; TTS_FALLBACK_EDGE = '1' }
 }
 
 # 3. 端侧推理
 Start-Svc -Name 'device' -Port 9000 -File $MainPy `
-    -Args @('-m','uvicorn','server:app','--host','127.0.0.1','--port','9000') `
+    -ArgList @('-m','uvicorn','server:app','--host','127.0.0.1','--port','9000') `
     -WorkDir (Join-Path $Float 'services\device') `
     -Env @{
         MNN_MODEL_DIR  = 'F:\mnn-test\qwen3-4b-roleplay-v4-mnn'
@@ -125,19 +136,19 @@ Start-Svc -Name 'device' -Port 9000 -File $MainPy `
     } -WaitSec 40
 
 # 4. 推理网关
-Start-Svc -Name 'gateway' -Port 9200 -File $MainPy -Args @('app.py') `
+Start-Svc -Name 'gateway' -Port 9200 -File $MainPy -ArgList @('app.py') `
     -WorkDir (Join-Path $Float 'services\ai_gateway') `
     -Env @{ INFERENCE_MODE = 'device'; DEVICE_BASE_URL = 'http://127.0.0.1:9000/v1'; DEVICE_MODEL = 'qwen3-4b-roleplay' }
 
 # 5. Socket 服务
 $bun = (Get-Command bun.cmd -ErrorAction SilentlyContinue).Source
 if (-not $bun) { $bun = 'bun.cmd' }
-Start-Svc -Name 'chat' -Port 3003 -File $bun -Args @('run','dev') `
+Start-Svc -Name 'chat' -Port 3003 -File $bun -ArgList @('run','dev') `
     -WorkDir (Join-Path $Root 'mini-services\chat-service')
 
 # 6. 前端
 $next = Join-Path $Root 'node_modules\.bin\next.cmd'
-Start-Svc -Name 'web' -Port 3000 -File $next -Args @('dev','-p','3000') -WorkDir $Root -WaitSec 40
+Start-Svc -Name 'web' -Port 3000 -File $next -ArgList @('dev','-p','3000') -WorkDir $Root -WaitSec 40
 
 $pids | ConvertTo-Json | Set-Content $PidFile -Encoding UTF8
 
