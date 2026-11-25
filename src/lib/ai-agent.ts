@@ -10,6 +10,7 @@ import { db } from '@/lib/db'
 import { broadcastToChatService } from '@/lib/chat-service'
 import { recallFacts, formatMemoryBlock, rememberFromMessage } from '@/lib/memory'
 import { splitByBudget, mergeSummary, formatSummary } from '@/lib/context'
+import { recallHistory, formatRecallBlock, RECALL_INTENT } from '@/lib/recall'
 
 const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL ?? 'http://127.0.0.1:9200'
 /** 每次读多少条消息用于「预算窗口 + 摘要」计算（不是实际进 prompt 的数量） */
@@ -124,6 +125,25 @@ export async function respondAsAgent(conversationId: string, agentId: string): P
         if (block) parts.push(block)
       } catch (e) {
         console.error('[ai-agent] 记忆召回失败:', e)
+      }
+
+      // 情景记忆：把被挤出上下文的历史原文捞回来（仅限显式回忆提问）
+      if (RECALL_INTENT.test(lastHuman.content)) {
+        try {
+          const recalled = await recallHistory(
+            conversationId,
+            lastHuman.content,
+            recent.map((m) => m.id),
+            2
+          )
+          const block = formatRecallBlock(recalled)
+          if (block) parts.push(block)
+          if (process.env.MEMORY_DEBUG === '1') {
+            console.error('[ai-agent] recall=%d', recalled.length)
+          }
+        } catch (e) {
+          console.error('[ai-agent] 历史检索失败:', e)
+        }
       }
     }
     const persona = parts.filter(Boolean).join('\n\n')

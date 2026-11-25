@@ -19,7 +19,9 @@ export interface Msg {
 export const MESSAGE_TOKEN_BUDGET = Number(process.env.MESSAGE_TOKEN_BUDGET ?? 1200)
 
 /** 摘要长度上限（字符） */
-const SUMMARY_MAX_CHARS = 180
+const SUMMARY_MAX_CHARS = 300
+/** 每次摘要最多合并几条消息（分组，避免大批次丢中间） */
+const SUMMARY_GROUP_SIZE = 6
 
 /**
  * 从最新往前取，返回：
@@ -52,24 +54,28 @@ function snippet(text: string, max = 14): string {
 /**
  * 滚动摘要（模板版）。
  *
- * 只抽取「用户说了什么」的线索：摘要的作用是维持对话连续性，
- * 不是复述内容。质量要求不高，换来零延迟、零模型调用。
+ * 分批处理：把溢出消息按 6 条一组切分，组内全部摘录后拼接。
+ * 这样「一次溢出 30 条」也不会只保留头尾、丢掉中间。
+ * 总长仍受 SUMMARY_MAX_CHARS 限制，超长时保留较新的部分——
+ * 更早的细节不再依赖摘要，而是靠历史检索（recall）找回。
  */
 export function mergeSummary(
   oldSummary: string,
   overflow: { role?: 'user' | 'assistant'; content: string }[]
 ): string {
-  const userLines = overflow
+  const userTexts = overflow
     .filter((m) => m.role !== 'assistant')
     .map((m) => snippet(m.content))
     .filter(Boolean)
 
-  // 去重；条数多时保留「开头 2 条 + 结尾 4 条」，
-  // 只留结尾会丢掉这段对话的起点，只剩结尾则在长对话里退化成"最近说了啥"
-  const uniq = [...new Set(userLines)]
-  const picked = uniq.length <= 6 ? uniq : [...uniq.slice(0, 2), ...uniq.slice(-4)]
-  const add = picked.join('、')
+  // 按组切分，组内去重后全部保留
+  const groups: string[] = []
+  for (let i = 0; i < userTexts.length; i += SUMMARY_GROUP_SIZE) {
+    const group = [...new Set(userTexts.slice(i, i + SUMMARY_GROUP_SIZE))]
+    if (group.length) groups.push(group.join('、'))
+  }
 
+  const add = groups.join('；')
   let merged = oldSummary && add ? `${oldSummary}；${add}` : oldSummary || add
   if (merged.length > SUMMARY_MAX_CHARS) {
     merged = '…' + merged.slice(-(SUMMARY_MAX_CHARS - 1))
