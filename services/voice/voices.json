@@ -3,7 +3,7 @@
   "voices": {
     "dafeiyu": {
       "text_lang": "zh",
-      "ref_audio_path": "F:/GPT-SoVITS/ref_dafeiyu.wav",
+      "ref_audio_path": "services/voice/refs/dafeiyu_ref.wav",
       "prompt_text": "什么嘛，这么简单的事情，你居然专门跑来问我。",
       "prompt_lang": "zh",
       "speed_factor": 1.0,
