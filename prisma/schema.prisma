@@ -88,6 +88,8 @@ model Message {
   senderId       String
   content        String
   type           String   @default("text")
+  /// 文本向量（Float32Array 序列化为字节），用于语义召回
+  embedding      Bytes?
   createdAt      DateTime @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)

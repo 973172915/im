@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 <#
 .SYNOPSIS
     停止 start-all.ps1 启动的全部服务。
@@ -11,7 +11,7 @@ param(
 
 $ErrorActionPreference = 'Continue'
 $PidFile = Join-Path $Root '.dev-pids.json'
-$Ports   = @{ sovits = 9880; tts = 9100; device = 9000; gateway = 9200; chat = 3003; web = 3000 }
+$Ports   = @{ sovits = 9880; tts = 9100; embed = 9300; device = 9000; gateway = 9200; chat = 3003; web = 3000 }
 
 $pids = @{}
 if (Test-Path $PidFile) {

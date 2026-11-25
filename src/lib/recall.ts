@@ -9,6 +9,7 @@
  * 参考 MemGPT 的 recall storage 思路：淘汰 ≠ 删除，按需查回。
  */
 import { db } from '@/lib/db'
+import { embedTexts, embedOne, cosine, vecToBytes, bytesToVec } from '@/lib/embed'
 
 /** 显式回忆意图：只有这类提问才触发历史检索，避免每轮都注入无关消息 */
 export const RECALL_INTENT = /(还记得|记得|记不记得|上次|之前|我说过|忘了吗|我说的话|聊过|那次)/
@@ -80,9 +81,15 @@ export async function recallHistory(
     where: { conversationId },
     orderBy: { id: 'desc' },
     take: 500,
-    select: { id: true, content: true, createdAt: true },
+    select: { id: true, content: true, createdAt: true, embedding: true },
   })
   if (!rows.length) return []
+
+  // 补齐缺失的向量（每次最多 80 条，避免首轮卡顿）
+  await ensureEmbeddings(rows.filter((r) => !r.embedding).slice(0, 80))
+
+  // 查询单独编码：和文档混批会互相影响
+  const queryVec = await embedOne(query)
 
   const queryBigrams = bigrams(query)
   const excluded = new Set(excludeIds)
@@ -92,33 +99,70 @@ export async function recallHistory(
   const scored = rows
     .filter((r) => !excluded.has(r.id))
     .map((r) => {
-      let score = 0
-
-      // 完整命中权重最高
+      let lex = 0
       for (const k of threeGrams) {
-        if (r.content.includes(k)) score += 2
-        // 「想养猫」vs 原文「想养只猫」：不是子串，但字符按序出现 —— 子序列算半个命中
-        else if (isSubsequence(k, r.content)) score += 1.2
+        if (r.content.includes(k)) lex += 2
+        else if (isSubsequence(k, r.content)) lex += 1.2
       }
       for (const k of twoGrams) {
-        if (r.content.includes(k)) score += 0.8
+        if (r.content.includes(k)) lex += 0.8
       }
 
-      // 二元组重叠作为补充信号
       const msgBigrams = bigrams(r.content)
       let overlap = 0
       for (const g of queryBigrams) if (msgBigrams.has(g)) overlap++
       const ratio = queryBigrams.size ? overlap / queryBigrams.size : 0
 
-      return { id: r.id, content: r.content, createdAt: r.createdAt, score: score + ratio * 2, ratio }
+      const cos =
+        queryVec && r.embedding ? cosine(queryVec, bytesToVec(r.embedding as Uint8Array)) : 0
+
+      // 词法分与语义分分开算：语义分不能反过来帮词法分过线，
+      // 否则「cos 0.42 × 3 = 1.26」会把无关消息顶进结果里
+      const lexScore = lex + ratio * 2
+      const pass = (lexScore >= 1.2 || cos >= 0.5) && ratio < 0.75
+      const score = lexScore + cos * 3
+      return { id: r.id, content: r.content, createdAt: r.createdAt, score, ratio, cos, pass }
     })
-    // 排除与当前提问高度相似的消息：那是"上次问过的同一个问题"，不是可用的回忆
-    .filter((r) => r.score >= 1.2 && r.ratio < 0.75)
+    .filter((r) => r.pass)
 
   scored.sort((a, b) => b.score - a.score || b.id - a.id)
-  return scored
+
+  // 只保留与最佳结果差距不大的，避免把弱相关也塞进去
+  const top = scored[0]
+  const kept = top ? scored.filter((r) => r.score >= top.score * 0.6) : []
+
+  return kept
     .slice(0, limit)
     .map((r) => ({ id: r.id, content: r.content, createdAt: r.createdAt, hits: Math.round(r.score * 10) / 10 }))
+}
+
+/**
+ * 给缺少向量的消息补编码并写库。
+ *
+ * 为什么逐条编码：实测同一批次编码会把相似度从 0.59 拉到 0.31（padding 影响 CLS 表示），
+ * 逐条编码虽然多几次请求，但向量稳定。用 4 路并发控制耗时。
+ */
+async function ensureEmbeddings(
+  rows: { id: number; content: string; embedding?: Uint8Array | null }[]
+) {
+  const targets = rows.filter((r) => !r.embedding && r.content.trim().length >= 2)
+  if (!targets.length) return
+
+  const CONCURRENCY = 4
+  for (let i = 0; i < targets.length; i += CONCURRENCY) {
+    const chunk = targets.slice(i, i + CONCURRENCY)
+    const vectors = await Promise.all(chunk.map((r) => embedOne(r.content)))
+    await Promise.all(
+      chunk.map((r, j) => {
+        const v = vectors[j]
+        if (!v) return Promise.resolve()
+        r.embedding = vecToBytes(v)
+        return db.message
+          .update({ where: { id: r.id }, data: { embedding: vecToBytes(v) } })
+          .catch(() => {})
+      })
+    )
+  }
 }
 
 /** 判断 needle 的字符是否按顺序出现在 haystack 中（中文分词不一致时的兜底匹配） */

@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 <#
 .SYNOPSIS
     一键启动灵犀 IM 的全部本地服务。
@@ -123,6 +123,13 @@ if (-not $SkipVoice) {
     Start-Svc -Name 'tts' -Port 9100 -File $MainPy -ArgList @('server.py') `
         -WorkDir (Join-Path $Float 'services\voice') `
         -Env @{ TTS_ENGINE = 'sovits'; SOVITS_API = 'http://127.0.0.1:9880'; SOVITS_VOICE = 'dafeiyu'; TTS_FALLBACK_EDGE = '1' }
+}
+
+# 3. 向量服务（记忆语义召回）
+if (-not $SkipVoice) {
+    Start-Svc -Name 'embed' -Port 9300 -File $VoicePy -ArgList @('server.py') `
+        -WorkDir (Join-Path $Float 'services\embed') `
+        -Env @{ EMBED_MODEL_DIR = 'F:\models\bge-small-zh-v1.5' } -WaitSec 40
 }
 
 # 3. 端侧推理
