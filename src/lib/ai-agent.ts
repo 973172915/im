@@ -9,9 +9,11 @@
 import { db } from '@/lib/db'
 import { broadcastToChatService } from '@/lib/chat-service'
 import { recallFacts, formatMemoryBlock, rememberFromMessage } from '@/lib/memory'
+import { splitByBudget, mergeSummary, formatSummary } from '@/lib/context'
 
 const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL ?? 'http://127.0.0.1:9200'
-const HISTORY_LIMIT = 20
+/** 每次读多少条消息用于「预算窗口 + 摘要」计算（不是实际进 prompt 的数量） */
+const HISTORY_SCAN_LIMIT = 60
 const FALLBACK_TEXT = '（走神了一下…你刚才说什么？）'
 
 /** conversationId -> 正在跑的 AbortController */
@@ -64,34 +66,67 @@ export async function respondAsAgent(conversationId: string, agentId: string): P
     if (!found || found.kind !== 'ai') return
     agent = found
 
-    // 上下文：最近 N 条，按 id 升序
+    // 取比预算窗口更多的消息：多出来的部分用于生成滚动摘要
     const history = await db.message.findMany({
       where: { conversationId },
       orderBy: { id: 'desc' },
-      take: HISTORY_LIMIT,
+      take: HISTORY_SCAN_LIMIT,
       select: { id: true, senderId: true, content: true },
     })
     const ordered = history.slice().reverse()
-    const messages = ordered.map((m) => ({
-      role: m.senderId === agentId ? 'assistant' : 'user',
-      content: m.content,
+    if (ordered.length === 0) return
+
+    const withRole = ordered.map((m) => ({
+      ...m,
+      role: (m.senderId === agentId ? 'assistant' : 'user') as 'user' | 'assistant',
     }))
-    if (messages.length === 0) return
+
+    // 按 token 预算切分：recent 进 prompt，overflow 进摘要
+    const { recent, overflow } = splitByBudget(withRole)
+
+    // 滚动摘要：只处理上次摘要之后的新溢出消息，避免重复压缩
+    const conv = await db.conversation.findUnique({
+      where: { id: conversationId },
+      select: { summary: true, summaryMsgId: true },
+    })
+    let summary = conv?.summary ?? ''
+    const coveredUpTo = conv?.summaryMsgId ?? 0
+    const toSummarize = overflow.filter((m) => m.id > coveredUpTo)
+    if (toSummarize.length) {
+      summary = mergeSummary(summary, toSummarize)
+      await db.conversation.update({
+        where: { id: conversationId },
+        data: { summary, summaryMsgId: toSummarize[toSummarize.length - 1].id },
+      })
+    }
+
+    const messages = recent.map((m) => ({ role: m.role, content: m.content }))
+
+    if (process.env.MEMORY_DEBUG === '1') {
+      console.error(
+        '[ai-agent] ctx recent=%d overflow=%d toSum=%d summaryLen=%d',
+        recent.length,
+        overflow.length,
+        toSummarize.length,
+        summary.length
+      )
+    }
 
     // 最近一条「人类」消息：记忆按人隔离，只取这个人说过的话
     const lastHuman = [...ordered].reverse().find((m) => m.senderId !== agentId)
-    let persona = agent.persona
+    const parts: string[] = [agent.persona]
+    const summaryBlock = formatSummary(summary)
+    if (summaryBlock) parts.push(summaryBlock)
     if (lastHuman) {
       try {
         const facts = await recallFacts(lastHuman.senderId, lastHuman.content, 3)
         const block = formatMemoryBlock(facts)
-        if (block) {
-          persona = `${agent.persona}\n\n${block}`
-        }
+        if (block) parts.push(block)
       } catch (e) {
         console.error('[ai-agent] 记忆召回失败:', e)
       }
     }
+    const persona = parts.filter(Boolean).join('\n\n')
 
     // 「正在输入」
     await broadcastToChatService({

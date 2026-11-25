@@ -53,13 +53,17 @@ model Friendship {
 }
 
 model Conversation {
-  id          String   @id @default(cuid())
-  type        String // single | group
-  name        String? // group name
-  avatarColor String   @default("#f59e0b")
-  createdById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  type         String // single | group
+  name         String? // group name
+  avatarColor  String   @default("#f59e0b")
+  createdById  String?
+  /// 滚动摘要：超出上下文预算的历史被压缩到这里
+  summary      String   @default("")
+  /// 已被摘要覆盖的最后一条消息 id（避免重复摘要）
+  summaryMsgId Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   members  ConversationMember[]
   messages Message[]
