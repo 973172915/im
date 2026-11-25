@@ -65,10 +65,13 @@
 
 ## 自训练模型
 
-| 模型 | 用途 | 数据 | 位置 |
+| 模型 | 用途 | 数据 | 下载 |
 | --- | --- | --- | --- |
-| **沐雪 Qwen3-4B LoRA** | AI 好友对话 | 2474 条对话（CC-BY-NC） | `<MODEL_REPO_LORA>` |
-| **大肥鱼 GPT-SoVITS v2** | 语音合成音色 | 145 条语音 / 18.5 分钟（CC-BY-NC） | `<MODEL_REPO_VOICE>` |
+| **沐雪 Qwen3-4B LoRA** | AI 好友对话 | 2474 条对话（CC-BY-NC） | [lora_v4_slim.tar.gz](https://github.com/973172915/im/releases/download/v0.1.0/lora_v4_slim.tar.gz) |
+| **大肥鱼 GPT-SoVITS v2** | 语音合成音色 | 145 条语音 / 18.5 分钟（CC-BY-NC） | [voice_model_dafeiyu.tar.gz](https://github.com/973172915/im/releases/download/v0.1.0/voice_model_dafeiyu.tar.gz) |
+
+> 两个模型均为非商业用途；权重放在 Release 里（Git 不适合托管大文件）。
+> ModelScope 镜像页：`<MODEL_REPO_LORA>` / `<MODEL_REPO_VOICE>`（待补充）
 
 ### 对话模型要点
 
