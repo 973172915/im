@@ -25,6 +25,7 @@ model User {
   memberships          ConversationMember[]
   friendshipsRequested Friendship[]        @relation("FriendshipRequested")
   friendshipsReceived  Friendship[]        @relation("FriendshipReceived")
+  memories             MemoryItem[]
 }
 
 model Session {
@@ -89,4 +90,26 @@ model Message {
   sender       User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, id])
+}
+
+/// 长期记忆：从对话里抽取的事实，跨会话召回后注入上下文。
+/// scope=user 时按 userId 隔离；scope=global 为共享知识（预留 kind=doc）。
+model MemoryItem {
+  id          String    @id @default(cuid())
+  scope       String    @default("user") // user | global
+  userId      String?
+  kind        String    @default("fact") // fact | doc
+  content     String
+  keywords    String    @default("")     // 空格分隔，用于精确召回
+  confidence  Float     @default(0.8)
+  sourceMsgId Int?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  lastUsedAt  DateTime?
+  usedCount   Int       @default(0)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind])
+  @@index([scope])
 }

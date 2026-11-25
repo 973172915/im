@@ -8,6 +8,7 @@
  */
 import { db } from '@/lib/db'
 import { broadcastToChatService } from '@/lib/chat-service'
+import { recallFacts, formatMemoryBlock, rememberFromMessage } from '@/lib/memory'
 
 const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL ?? 'http://127.0.0.1:9200'
 const HISTORY_LIMIT = 20
@@ -68,15 +69,29 @@ export async function respondAsAgent(conversationId: string, agentId: string): P
       where: { conversationId },
       orderBy: { id: 'desc' },
       take: HISTORY_LIMIT,
-      select: { senderId: true, content: true },
+      select: { id: true, senderId: true, content: true },
     })
-    const messages = history
-      .reverse()
-      .map((m) => ({
-        role: m.senderId === agentId ? 'assistant' : 'user',
-        content: m.content,
-      }))
+    const ordered = history.slice().reverse()
+    const messages = ordered.map((m) => ({
+      role: m.senderId === agentId ? 'assistant' : 'user',
+      content: m.content,
+    }))
     if (messages.length === 0) return
+
+    // 最近一条「人类」消息：记忆按人隔离，只取这个人说过的话
+    const lastHuman = [...ordered].reverse().find((m) => m.senderId !== agentId)
+    let persona = agent.persona
+    if (lastHuman) {
+      try {
+        const facts = await recallFacts(lastHuman.senderId, lastHuman.content, 3)
+        const block = formatMemoryBlock(facts)
+        if (block) {
+          persona = `${agent.persona}\n\n${block}`
+        }
+      } catch (e) {
+        console.error('[ai-agent] 记忆召回失败:', e)
+      }
+    }
 
     // 「正在输入」
     await broadcastToChatService({
@@ -90,12 +105,16 @@ export async function respondAsAgent(conversationId: string, agentId: string): P
       },
     })
 
+    if (process.env.MEMORY_DEBUG === '1') {
+      console.error('[ai-agent] persona=%s', JSON.stringify(persona))
+    }
+
     const res = await fetch(`${AI_GATEWAY_URL}/v1/reply`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         messages,
-        persona: agent.persona,
+        persona,
         session_id: conversationId,
       }),
       signal: controller.signal,
@@ -144,6 +163,13 @@ export async function respondAsAgent(conversationId: string, agentId: string): P
       where: { id: conversationId },
       data: { updatedAt: new Date() },
     })
+
+    // 异步抽取长期记忆（不阻塞回复，失败不影响对话）
+    if (lastHuman) {
+      void rememberFromMessage(lastHuman.senderId, lastHuman.content, lastHuman.id).catch((e) =>
+        console.error('[ai-agent] 记忆抽取失败:', e)
+      )
+    }
 
     await broadcastToChatService({
       room,
