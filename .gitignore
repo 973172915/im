@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -52,3 +53,23 @@ prompt
 server.log
 # Skills directory
 /skills/
+
+# 数据库（本地 SQLite，不入库）
+db/*.db
+*.db
+
+# 进程文件
+*.pid
+
+# 模型权重（体积大，走 Release / ModelScope）
+*.pth
+*.ckpt
+*.safetensors
+*.mnn
+*.onnx
+models/
+weights/
+
+# 训练产物
+*.tar.gz
+/dist/
