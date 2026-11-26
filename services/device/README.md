@@ -36,7 +36,7 @@ cl /EHsc /std:c++17 /I MNN\include mnn_stream.cpp /link /LIBPATH:MNN\build\Relea
 
 ```powershell
 cd services/device
-$env:MNN_MODEL_DIR = "F:\mnn-test\qwen3-4b-roleplay-v4-mnn"
+$env:MNN_MODEL_DIR = "F:\mnn-test\qwen3-4b-roleplay-v5-mnn"
 $env:MODEL_ID      = "qwen3-4b-roleplay"
 $env:MNN_STREAM_EXE = "$PWD\mnn_stream.exe"
 python -m uvicorn server:app --host 127.0.0.1 --port 9000

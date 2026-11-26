@@ -135,7 +135,7 @@ Start-Svc -Name 'device' -Port 9000 -File $MainPy `
     -ArgList @('-m','uvicorn','server:app','--host','127.0.0.1','--port','9000') `
     -WorkDir (Join-Path $Root 'services\device') `
     -Env @{
-        MNN_MODEL_DIR  = 'F:\mnn-test\qwen3-4b-roleplay-v4-mnn'
+        MNN_MODEL_DIR  = 'F:\mnn-test\qwen3-4b-roleplay-v5-mnn'
         MODEL_ID       = 'qwen3-4b-roleplay'
         MNN_STREAM_EXE = (Join-Path $Root 'services\device\mnn_stream.exe')
     } -WaitSec 40
