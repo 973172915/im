@@ -1,0 +1,6 @@
+{"run": "lr2e-4", "epoch": 1, "eval_loss": 2.72}
+{"run": "lr2e-4", "epoch": 2, "eval_loss": 2.84}
+{"run": "lr2e-4", "epoch": 3, "eval_loss": 3.176}
+{"run": "lr1e-4", "epoch": 1, "eval_loss": 2.724}
+{"run": "lr1e-4", "epoch": 2, "eval_loss": 2.774}
+{"run": "lr1e-4", "epoch": 3, "eval_loss": 2.954}
