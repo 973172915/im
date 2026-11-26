@@ -159,7 +159,7 @@ def make_training_args(args) -> TrainingArguments:
         lr_scheduler_type="cosine",
         logging_steps=10,
         save_strategy="epoch",
-        save_total_limit=2,
+        save_total_limit=getattr(args, "save_total_limit", 3),
         bf16=True,
         gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False},
@@ -200,6 +200,7 @@ def main() -> None:
     ap.add_argument("--alpha", type=int, default=32)
     ap.add_argument("--max-samples", type=int, default=0)
     ap.add_argument("--no-4bit", action="store_true")
+    ap.add_argument("--save-total-limit", type=int, default=3, help="保留几个 checkpoint（默认 3=每个 epoch 都留）")
     ap.add_argument("--log-jsonl", default="", help="把 loss 逐步写入该 jsonl，供 plot_loss.py 画图")
     ap.add_argument("--eval-only", action="store_true",
                     help="只算 eval loss 不训练（LoRA 零初始化，等价于基座基线）")
