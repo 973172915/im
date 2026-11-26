@@ -21,6 +21,32 @@
 
 ## 阶段 0：数据准备（CPU，约 30 分钟）
 
+> **已完成**：用 Muice 原始完整版（3637 段对话）重建了 v5 数据集。
+
+```bash
+python training/build_dataset_v5.py \
+  --input ~/Downloads/train_all.jsonl \
+  --out-dir training/data/v5 --eval-ratio 0.15
+```
+
+产出 `train_v5.jsonl` / `eval_v5.jsonl` / `stats.json`：
+
+| 项 | 值 |
+| --- | --- |
+| 训练样本 | **3020** |
+| 评测样本 | **381** |
+| 多轮样本 | 293（9.7%） |
+| 回复长度 | mean 25.1 / p50 18 / p95 74 / max 147 |
+| 用户句泄漏 | **0** |
+| 丢弃 | 长回复 130、短回复 18、模板任务对话 333 |
+
+脚本内置四道硬校验（不通过直接退出）：
+
+1. 每条样本以 assistant 结尾
+2. 消息里无残留 `<|im_end|>` 等特殊 token
+3. assistant 非空
+4. train / eval 的**用户句零重叠**（重叠样本循环挪回训练集）
+
 ### 0.1 数据体检
 
 ```bash
