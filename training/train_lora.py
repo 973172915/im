@@ -275,7 +275,8 @@ def main() -> None:
 
     train_ds = None if args.eval_only else make_ds(args.train)
     eval_ds = make_ds(args.eval) if Path(args.eval).exists() else None
-    print("train=%d eval=%s" % (len(train_ds), len(eval_ds) if eval_ds else 0))
+    print("train=%s eval=%s" % (len(train_ds) if train_ds else 0,
+                                len(eval_ds) if eval_ds else 0))
 
     targs = make_training_args(args)
     callbacks = [JsonlLogger(args.log_jsonl)] if args.log_jsonl else []
