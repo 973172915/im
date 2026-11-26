@@ -89,3 +89,5 @@ services/device/*.exe
 
 # 训练数据（体积大、含第三方语料，不入库）
 /training/data/
+# 本地打包产物
+dist_*.zip
