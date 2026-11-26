@@ -273,7 +273,7 @@ def main() -> None:
             rows = rows[: args.max_samples]
         return Dataset.from_list(rows).map(encode, remove_columns=["messages", "meta"])
 
-    train_ds = make_ds(args.train)
+    train_ds = None if args.eval_only else make_ds(args.train)
     eval_ds = make_ds(args.eval) if Path(args.eval).exists() else None
     print("train=%d eval=%s" % (len(train_ds), len(eval_ds) if eval_ds else 0))
 
