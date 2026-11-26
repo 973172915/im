@@ -81,7 +81,8 @@ def main() -> None:
     lens, reps, leaks = [], [], 0
     for p in PROMPTS:
         msgs = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": p}]
-        ids = tok.apply_chat_template(msgs, add_generation_prompt=True, return_tensors="pt").to(model.device)
+        enc = tok.apply_chat_template(msgs, add_generation_prompt=True, return_tensors="pt")
+        ids = (enc["input_ids"] if hasattr(enc, "keys") else enc).to(model.device)
         with torch.no_grad():
             out = model.generate(
                 ids, max_new_tokens=args.max_new_tokens, do_sample=True,
