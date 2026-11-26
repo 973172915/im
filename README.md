@@ -200,6 +200,7 @@ CLOUD_BASE_URL=http://127.0.0.1:8000/v1
 | [上下文管理](docs/context.md) | token 预算、滚动摘要、情景检索、向量召回 |
 | [长期记忆](docs/memory.md) | 事实抽取、召回打分、注入措辞实验 |
 | [模型训练](docs/training.md) | QLoRA 与 GPT-SoVITS 的配置、结果、踩坑 |
+| [微调方案 v2](docs/finetune-plan.md) | 解决欠拟合的完整步骤：数据→基线→扫描→评测→导出 |
 | [部署说明](docs/deploy.md) | 最小启动、三种推理后端、验收清单 |
 | [模型卡](docs/model-cards/) | 三个已发布模型的完整说明 |
 
