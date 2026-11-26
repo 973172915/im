@@ -83,6 +83,11 @@
 - **关键修复**：`<|im_end|>` 必须计入 loss，否则模型不会停止（会无限重复）
 - 效果：平均回复从 165 字降到 25 字，短句 + 人设稳定
 
+![loss](docs/images/loss_r8_e2.png)
+
+> train 5.01 → 2.23，eval 2.623 → 2.584（epoch 2 仍在降，说明还能继续训）；
+> 曲线可用 `python scripts/plot_loss.py docs/data/loss_r8_e2.jsonl -o out.png` 复现。
+
 ### 音色模型要点
 
 - 底模：GPT-SoVITS v2final

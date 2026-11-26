@@ -20,7 +20,43 @@ import torch
 import transformers
 from datasets import Dataset
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
-from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    Trainer,
+    TrainerCallback,
+    TrainingArguments,
+)
+
+
+class JsonlLogger(TrainerCallback):
+    """把每个 logging 点和 eval 点追加到 jsonl，供离线画曲线。
+
+    一行一条：
+        {"step": 10, "epoch": 0.15, "loss": 2.71, "lr": 9.9e-05, "grad_norm": 1.9}
+        {"step": 100, "epoch": 1.0, "eval_loss": 2.55}
+    """
+
+    def __init__(self, path: str):
+        self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.write_text("", encoding="utf-8")
+
+    def _write(self, row: dict) -> None:
+        with open(self.path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+    def on_log(self, args, state, control, logs=None, **kwargs):  # noqa: ANN001
+        if not logs:
+            return
+        row = {"step": state.global_step, "epoch": round(state.epoch or 0.0, 3)}
+        for key, cast in (("loss", float), ("eval_loss", float),
+                          ("learning_rate", float), ("grad_norm", float)):
+            if key in logs and logs[key] is not None:
+                row["lr" if key == "learning_rate" else key] = round(cast(logs[key]), 6)
+        if len(row) > 2:
+            self._write(row)
+
 
 TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj",
                   "gate_proj", "up_proj", "down_proj"]
@@ -164,6 +200,7 @@ def main() -> None:
     ap.add_argument("--alpha", type=int, default=32)
     ap.add_argument("--max-samples", type=int, default=0)
     ap.add_argument("--no-4bit", action="store_true")
+    ap.add_argument("--log-jsonl", default="", help="把 loss 逐步写入该 jsonl，供 plot_loss.py 画图")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
@@ -239,8 +276,12 @@ def main() -> None:
     print("train=%d eval=%s" % (len(train_ds), len(eval_ds) if eval_ds else 0))
 
     targs = make_training_args(args)
+    callbacks = [JsonlLogger(args.log_jsonl)] if args.log_jsonl else []
+    if args.log_jsonl:
+        print("loss 逐步写入:", args.log_jsonl)
     trainer = Trainer(model=model, args=targs, train_dataset=train_ds,
-                      eval_dataset=eval_ds, data_collator=Collator(tok.pad_token_id))
+                      eval_dataset=eval_ds, data_collator=Collator(tok.pad_token_id),
+                      callbacks=callbacks)
     trainer.train()
     trainer.save_model(args.out)
     tok.save_pretrained(args.out)
