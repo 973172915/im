@@ -201,6 +201,8 @@ def main() -> None:
     ap.add_argument("--max-samples", type=int, default=0)
     ap.add_argument("--no-4bit", action="store_true")
     ap.add_argument("--log-jsonl", default="", help="把 loss 逐步写入该 jsonl，供 plot_loss.py 画图")
+    ap.add_argument("--eval-only", action="store_true",
+                    help="只算 eval loss 不训练（LoRA 零初始化，等价于基座基线）")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
@@ -282,6 +284,21 @@ def main() -> None:
     trainer = Trainer(model=model, args=targs, train_dataset=train_ds,
                       eval_dataset=eval_ds, data_collator=Collator(tok.pad_token_id),
                       callbacks=callbacks)
+
+    if args.eval_only:
+        # LoRA 的 B 矩阵零初始化，此时模型输出等于基座 —— 可直接当基座基线
+        if eval_ds is None:
+            raise SystemExit("--eval-only 需要 --eval 数据集")
+        metrics = trainer.evaluate()
+        loss = metrics.get("eval_loss")
+        print("\n=== 基线 ===")
+        print("eval_loss %.4f  (%d 条样本)" % (loss, len(eval_ds)))
+        if args.log_jsonl:
+            JsonlLogger(args.log_jsonl)._write(
+                {"step": 0, "epoch": 0.0, "eval_loss": round(float(loss), 4)}
+            )
+        return
+
     trainer.train()
     trainer.save_model(args.out)
     tok.save_pretrained(args.out)
