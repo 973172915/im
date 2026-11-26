@@ -91,3 +91,5 @@ services/device/*.exe
 /training/data/
 # 本地打包产物
 dist_*.zip
+# 云上下载的 adapter 与日志
+/dist_v5/
